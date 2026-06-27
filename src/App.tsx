@@ -80,7 +80,8 @@ export default function App() {
     }));
 
     const size = levelData.size;
-    if (canExit(snake, snakes, size)) {
+    const activeSnakes = snakes.filter((s) => !exitingSnakeIds.has(s.id));
+    if (canExit(snake, activeSnakes, size)) {
       // SUCCESS: Snake can slide out along its path!
       // Push to undo stack
       setUndoHistory((prev) => [...prev, { snakes: currentSnakesClone, droplets }]);
@@ -189,7 +190,8 @@ export default function App() {
   const handleTriggerHint = () => {
     playClickSound(audioEnabled);
     const size = levelData.size;
-    const solvable = snakes.find((s) => !exitingSnakeIds.has(s.id) && canExit(s, snakes, size));
+    const activeSnakes = snakes.filter((s) => !exitingSnakeIds.has(s.id));
+    const solvable = activeSnakes.find((s) => canExit(s, activeSnakes, size));
     
     if (solvable) {
       setHintedSnakeId(solvable.id);

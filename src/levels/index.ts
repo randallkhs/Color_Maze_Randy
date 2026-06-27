@@ -1,4 +1,4 @@
-import { Level, Snake, generateSolvableLevel, isSolvable } from "../engine";
+import { Level, Snake, generateDenseLevel, isSolvable } from "../engine";
 
 // Standard vibrant color palette
 export const STANDARD_COLORS = [
@@ -338,64 +338,24 @@ export function getLevel(levelNum: number, colorblind: boolean): Level {
     }
   }
 
-  // Otherwise, dynamically generate a perfect level based on level number!
-  // Scale difficulty parameters based on level number
-  let size = 6;
-  let numSnakes = 4;
-  let minLen = 2;
-  let maxLen = 3;
-  let difficulty = "Easy";
+  // Difficulty curve: small & sparse  ->  large & densely interlaced
+  let size: number;
+  let maxLen: number;
+  let coverage: number;   // fraction of the board to fill
+  let difficulty: string;
 
-  if (levelNum <= 2) {
-    size = 5;
-    numSnakes = 3;
-    minLen = 2;
-    maxLen = 3;
-    difficulty = "Easy";
-  } else if (levelNum <= 5) {
-    size = 6;
-    numSnakes = 4;
-    minLen = 2;
-    maxLen = 4;
-    difficulty = "Easy";
-  } else if (levelNum <= 9) {
-    size = 6;
-    numSnakes = 5;
-    minLen = 2;
-    maxLen = 4;
-    difficulty = "Normal";
-  } else if (levelNum <= 15) {
-    size = 7;
-    numSnakes = 6;
-    minLen = 3;
-    maxLen = 4;
-    difficulty = "Normal";
-  } else if (levelNum <= 22) {
-    size = 7;
-    numSnakes = 8;
-    minLen = 3;
-    maxLen = 5;
-    difficulty = "Hard";
-  } else if (levelNum <= 30) {
-    size = 8;
-    numSnakes = 9;
-    minLen = 3;
-    maxLen = 5;
-    difficulty = "Hard";
-  } else if (levelNum <= 40) {
-    size = 8;
-    numSnakes = 11;
-    minLen = 3;
-    maxLen = 6;
-    difficulty = "Very Difficult";
-  } else {
-    // Super Hard levels!
-    size = Math.min(10, 8 + Math.floor((levelNum - 40) / 10));
-    numSnakes = Math.min(15, 11 + Math.floor((levelNum - 40) / 5));
-    minLen = 3;
-    maxLen = Math.min(7, 5 + Math.floor((levelNum - 40) / 15));
+  if (levelNum <= 5)        { size = 5;  maxLen = 3; coverage = 0.42; difficulty = "Easy"; }
+  else if (levelNum <= 10)  { size = 6;  maxLen = 4; coverage = 0.50; difficulty = "Normal"; }
+  else if (levelNum <= 16)  { size = 7;  maxLen = 5; coverage = 0.58; difficulty = "Normal"; }
+  else if (levelNum <= 24)  { size = 8;  maxLen = 6; coverage = 0.66; difficulty = "Hard"; }
+  else if (levelNum <= 34)  { size = 9;  maxLen = 7; coverage = 0.72; difficulty = "Hard"; }
+  else if (levelNum <= 45)  { size = 10; maxLen = 8; coverage = 0.78; difficulty = "Very Difficult"; }
+  else {
+    size = Math.min(14, 10 + Math.floor((levelNum - 46) / 8));
+    maxLen = Math.min(10, 8 + Math.floor((levelNum - 46) / 12));
+    coverage = 0.85;
     difficulty = "Super Hard";
   }
 
-  return generateSolvableLevel(levelNum, size, numSnakes, minLen, maxLen, difficulty, palette);
+  return generateDenseLevel(levelNum, size, coverage, maxLen, difficulty, palette);
 }

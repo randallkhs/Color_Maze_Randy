@@ -260,6 +260,112 @@ export function generateSolvableLevel(
   return getFallbackLevel(id, size, difficulty, colorPalette);
 }
 
+/**
+ * Dense, interlaced level generator (reverse construction; fills the board).
+ * - Repeatedly places snakes whose head exit-ray is clear of already-placed snakes.
+ * - Grows each snake with a turning bias so bodies wind and interlace.
+ * - Keeps going until it reaches the target coverage (fraction of cells filled).
+ * - Guaranteed solvable: solve order = reverse of placement order; verified by isSolvable.
+ */
+export function generateDenseLevel(
+  id: number,
+  size: number,
+  targetCoverage: number, // 0..1 fraction of cells to fill
+  maxLen: number,
+  difficulty: string,
+  colorPalette: string[]
+): Level {
+  const totalCells = size * size;
+  let best: { snakes: Snake[]; cov: number } | null = null;
+
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const occupied = new Set<string>();
+    const placed: Snake[] = [];
+    let idCounter = 1;
+    let guard = 0;
+
+    while (occupied.size < targetCoverage * totalCells && guard < 800) {
+      guard++;
+
+      // Candidate head + direction whose exit ray is clear of placed snakes
+      const candidates: { h: Cell; dir: Dir }[] = [];
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (occupied.has(`${r},${c}`)) continue;
+          for (const dir of ["U", "D", "L", "R"] as Dir[]) {
+            const ray = getExitRayCells({ r, c }, dir, size);
+            if (ray.every((cell) => !occupied.has(`${cell.r},${cell.c}`))) {
+              candidates.push({ h: { r, c }, dir });
+            }
+          }
+        }
+      }
+      if (candidates.length === 0) break;
+      shuffleArray(candidates);
+
+      let placedOne = false;
+      for (let k = 0; k < Math.min(candidates.length, 25); k++) {
+        const { h, dir } = candidates[k];
+        const rayset = new Set(getExitRayCells(h, dir, size).map((c) => `${c.r},${c.c}`));
+        const path: Cell[] = [h];
+        const target = 2 + Math.floor(Math.random() * (maxLen - 1)); // 2..maxLen
+        let lastDelta: { dr: number; dc: number } | null = null;
+
+        while (path.length < target) {
+          const tip = path[path.length - 1];
+          const opts: { cell: Cell; turn: boolean }[] = [];
+          for (const d of ["U", "D", "L", "R"] as Dir[]) {
+            const { dr, dc } = DELTA[d];
+            const nr = tip.r + dr;
+            const nc = tip.c + dc;
+            if (nr < 0 || nr >= size || nc < 0 || nc >= size) continue;
+            const key = `${nr},${nc}`;
+            if (occupied.has(key)) continue;
+            if (path.some((p) => p.r === nr && p.c === nc)) continue;
+            if (rayset.has(key)) continue; // keep the head's own exit lane clear
+            const turn = lastDelta ? dr !== lastDelta.dr || dc !== lastDelta.dc : true;
+            opts.push({ cell: { r: nr, c: nc }, turn });
+          }
+          if (opts.length === 0) break;
+
+          // Turning bias (~70%) so snakes wind and interlace instead of going straight
+          const turns = opts.filter((o) => o.turn);
+          const pool = turns.length > 0 && Math.random() < 0.7 ? turns : opts;
+          const choice = pool[Math.floor(Math.random() * pool.length)];
+          lastDelta = { dr: choice.cell.r - tip.r, dc: choice.cell.c - tip.c };
+          path.push(choice.cell);
+        }
+
+        if (path.length >= 2) {
+          const cells = [...path].reverse(); // [tail ... head]
+          placed.unshift({
+            id: idCounter++,
+            color: colorPalette[Math.floor(Math.random() * colorPalette.length)],
+            dir,
+            cells,
+            errored: false,
+          });
+          for (const cell of path) occupied.add(`${cell.r},${cell.c}`);
+          placedOne = true;
+          break;
+        }
+      }
+      if (!placedOne) break;
+    }
+
+    if (placed.length >= 3 && isSolvable(placed, size)) {
+      const cov = occupied.size;
+      if (!best || cov > best.cov) best = { snakes: placed, cov };
+      if (cov >= targetCoverage * totalCells * 0.92) {
+        return { id, size, droplets: 4, difficulty, snakes: placed };
+      }
+    }
+  }
+
+  if (best) return { id, size, droplets: 4, difficulty, snakes: best.snakes };
+  return getFallbackLevel(id, size, difficulty, colorPalette);
+}
+
 function shuffleArray<T>(array: T[]): void {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));

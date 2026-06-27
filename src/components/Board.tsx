@@ -117,7 +117,7 @@ export const Board: React.FC<BoardProps> = ({
             const h = head(snake);
             const hx = h.c * cellSize + cellSize / 2;
             const hy = h.r * cellSize + cellSize / 2;
-            const arrowSize = cellSize * 0.28;
+            const arrowSize = cellSize * 0.42;
 
             let arrowPoints = "";
             let letterRotation = 0;
@@ -142,6 +142,8 @@ export const Board: React.FC<BoardProps> = ({
 
             // Direction symbol or index for Colorblind mode helper text
             const dirLabel = snake.dir;
+            const { dr, dc } = DELTA[snake.dir];
+            const exitTransition = { duration: 1.3, ease: [0.45, 0, 0.25, 1] };
 
             return (
               <motion.g
@@ -192,23 +194,38 @@ export const Board: React.FC<BoardProps> = ({
                   />
                 )}
 
-                {/* 3. Snake Body (Styled line) */}
+                {/* 3. Snake Body (Styled outer line) */}
                 <motion.path
                   id={`snake-body-${snake.id}`}
                   d={pathD}
                   stroke={snake.errored ? "#FFFFFF" : snake.color}
-                  strokeWidth={cellSize * 0.58}
+                  strokeWidth={cellSize * 0.40}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   fill="none"
                   strokeDasharray={`${bodyLength} 999999`}
-                  animate={isExiting ? { strokeDashoffset: totalLength } : { strokeDashoffset: 0 }}
-                  transition={{ duration: 0.55, ease: "easeIn" }}
+                  animate={isExiting ? { strokeDashoffset: -totalLength } : { strokeDashoffset: 0 }}
+                  transition={exitTransition}
                   onAnimationComplete={() => {
                     if (isExiting) {
                       onExitComplete(snake.id);
                     }
                   }}
+                  className="pointer-events-none"
+                />
+
+                {/* 3b. Snake Body Inner Glow Highlight Detail (Provides a premium glassy tubular vibe) */}
+                <motion.path
+                  id={`snake-body-inner-${snake.id}`}
+                  d={pathD}
+                  stroke={snake.errored ? "rgba(0, 0, 0, 0.25)" : "rgba(255, 255, 255, 0.45)"}
+                  strokeWidth={cellSize * 0.12}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                  strokeDasharray={`${bodyLength} 999999`}
+                  animate={isExiting ? { strokeDashoffset: -totalLength } : { strokeDashoffset: 0 }}
+                  transition={exitTransition}
                   className="pointer-events-none"
                 />
 
@@ -241,13 +258,13 @@ export const Board: React.FC<BoardProps> = ({
                   </g>
                 )}
 
-                {/* 5. Head Direction Arrow (Desvanece al salir) */}
+                {/* 5. Head Direction Arrow (Slides with head) */}
                 <motion.polygon
                   id={`snake-arrow-${snake.id}`}
                   points={arrowPoints}
                   fill={snake.errored ? "#FFFFFF" : snake.color}
-                  animate={isExiting ? { opacity: 0, scale: 0 } : { opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.15 }}
+                  animate={isExiting ? { x: dc * extLen, y: dr * extLen } : { x: 0, y: 0 }}
+                  transition={exitTransition}
                   className="pointer-events-none"
                 />
               </motion.g>
