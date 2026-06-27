@@ -1,0 +1,6 @@
+{
+  "name": "Color Maze",
+  "description": "A beautiful, mobile-first arrow-snake puzzle game. Slide colorful snakes out of the board in the correct order.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
